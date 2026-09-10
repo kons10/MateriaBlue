@@ -62,7 +62,7 @@ export function createBskyClient() {
     const sessionData = {
       accessJwt: access,
       refreshJwt: refresh,
-      did: decodeURIComponent(did),
+      did: did,
       handle: handle || '',
       email: '',
       emailConfirmed: false
@@ -80,16 +80,21 @@ export function createBskyClient() {
       .catch((err) => {
         console.warn('Session resume failed:', err);
         clearSession();
+        throw err;
       });
 
-    const timeoutPromise = new Promise((resolve) => {
+    const timeoutPromise = new Promise((resolve, reject) => {
       setTimeout(() => {
-        console.warn('Session resume timed out after 3000ms');
-        resolve();
-      }, 3000);
+        console.warn('Session resume timed out after 5000ms');
+        reject(new Error('Session resume timeout'));
+      }, 5000);
     });
 
-    return Promise.race([restorePromise, timeoutPromise]);
+    return Promise.race([restorePromise, timeoutPromise]).catch((err) => {
+      console.warn('Session restore failed or timed out:', err);
+      clearSession();
+      return Promise.resolve();
+    });
   })() : Promise.resolve();
 
   return {
